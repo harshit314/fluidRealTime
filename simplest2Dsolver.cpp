@@ -12,7 +12,7 @@ Vector2i wSize(1200, 1200);
 
 //define mesh:
 const int meshSize = 250, meshSizeP2 = 252; // square mesh, size excludes the boundary cells; meshSize is no. of cells in each direction
-float meshWidth, meshHeight;
+float cellWidth, cellHeight;
 
 //Velocity scale and time step:
 float Uscale = 200.f;
@@ -57,10 +57,10 @@ void advectField(float field[][meshSizeP2], float uxField[][meshSizeP2], float u
     {
         for (int j = 0; j < meshSize; j++)
         {
-            xPos = j*meshWidth - uxField[i+1][j+1]*dt;
-            yPos = i*meshHeight - uyField[i+1][j+1]*dt;
-            int ix = floor(xPos/(float)meshWidth), iy = floor(yPos/(float)meshHeight);  // integer part
-            float jx = (xPos/(float)meshWidth) - ix, jy = (yPos/(float)meshHeight) - iy;    //fractional part
+            xPos = j*cellWidth - uxField[i+1][j+1]*dt;
+            yPos = i*cellHeight - uyField[i+1][j+1]*dt;
+            int ix = floor(xPos/(float)cellWidth), iy = floor(yPos/(float)cellHeight);  // integer part
+            float jx = (xPos/(float)cellWidth) - ix, jy = (yPos/(float)cellHeight) - iy;    //fractional part
            // ix = jx<=0.5?ix-1:ix;
            // iy = jy<=0.5?iy-1:iy;   //no need to change jx and jy
             if(ix+1<0 || ix+1>meshSize)  { cout<<"Problem in advection!"<<endl; ix=0; }   
@@ -84,7 +84,7 @@ void advectField(float field[][meshSizeP2], float uxField[][meshSizeP2], float u
 void project(float pField[meshSizeP2][meshSizeP2], float uxField[][meshSizeP2], float uyField[][meshSizeP2])
 {
     int iterMax = 20;   // should compare with prev iteration step to terminate iteration loop
-    float h = meshWidth; //same as meshHeight
+    float h = cellWidth; //same as cellHeight
     float pFieldPrev[meshSizeP2][meshSizeP2] = {};
     float divField[meshSizeP2][meshSizeP2] = {};
     for (int iter = 0; iter <= iterMax; iter++)
@@ -134,7 +134,6 @@ void project(float pField[meshSizeP2][meshSizeP2], float uxField[][meshSizeP2], 
 
 }
 
-
 int main()
 {
     //define fields:
@@ -146,10 +145,10 @@ int main()
     
     float pField[meshSizeP2][meshSizeP2] = {};
 
-    meshWidth = (float)wSize.x/(float)meshSize;
-    meshHeight = (float)wSize.y/(float)meshSize;
+    cellWidth = (float)wSize.x/(float)meshSize;
+    cellHeight = (float)wSize.y/(float)meshSize;
 
-    dt = 2.f*meshWidth/Uscale;
+    dt = 2.f*cellWidth/Uscale;
     cout<<"dt: "<<dt<<endl;
 
     RenderWindow w(VideoMode(wSize.x, wSize.y), "simplest2Dsolver");
@@ -164,22 +163,22 @@ int main()
         {
             Vertex temp;
             temp.color = Color(255*density[i+1][j+1]);
-            temp.position = Vector2f(j*meshWidth, i*meshHeight);
+            temp.position = Vector2f(j*cellWidth, i*cellHeight);
             cells.push_back(temp);
             
-            temp.position = Vector2f((j+1)*meshWidth, i*meshHeight);
+            temp.position = Vector2f((j+1)*cellWidth, i*cellHeight);
             cells.push_back(temp);
             
-            temp.position = Vector2f((j+1)*meshWidth, (i+1)*meshHeight);
+            temp.position = Vector2f((j+1)*cellWidth, (i+1)*cellHeight);
             cells.push_back(temp);
             
-            temp.position = Vector2f(j*meshWidth, (i+1)*meshHeight);
+            temp.position = Vector2f(j*cellWidth, (i+1)*cellHeight);
             cells.push_back(temp);
         }   
     }
     
     cout<<"Total no. of cells by meshSize squared: "<<cells.size()/(4*meshSize*meshSize)<<endl;   //should be 1
-    cout<<"meshWidth: "<<meshWidth<<endl;
+    cout<<"cellWidth: "<<cellWidth<<endl;
     //Use mouse click to add density
     Vector2i localMousePos(0, 0), localMousePrevPos(0, 0);
     Color currColor = Color::White;
@@ -228,7 +227,7 @@ int main()
         int sourceSize = 5; //radius of source 
         if(mouseDown)
         {
-            int localJ = floor(localMousePos.x/meshWidth), localI = floor(localMousePos.y/meshHeight);
+            int localJ = floor(localMousePos.x/cellWidth), localI = floor(localMousePos.y/cellHeight);
             for (int iSource = localI-sourceSize; iSource <= localI+sourceSize; iSource++)
             {
                 if(iSource<0 || iSource>=meshSize)   continue;
@@ -243,7 +242,7 @@ int main()
                     //     uy[iSource+1][jSource+1] = Uscale*tanh(localMousePos.y-localMousePrevPos.y);
                     // }
                     // else    uy[iSource+1][jSource+1] = -Uscale;
-                    float localD = abs(jSource - localJ)*meshWidth + abs(iSource - localI)*meshHeight, dMax = sourceSize*(meshWidth+meshHeight);
+                    float localD = abs(jSource - localJ)*cellWidth + abs(iSource - localI)*cellHeight, dMax = sourceSize*(cellWidth+cellHeight);
                     
                     density[iSource + 1][jSource + 1] = density[iSource + 1][jSource + 1]<1.f-localD/(2.f*dMax)?1.f-localD/(2.f*dMax):density[iSource + 1][jSource + 1]; // added ones for the boundary offset
                     int cellCoord = cellIndxMap(iSource, jSource);

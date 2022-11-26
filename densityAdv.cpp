@@ -12,7 +12,7 @@ Vector2i wSize(1200, 1200);
 
 //define mesh:
 const int meshSize = 400, meshSizeP2 = 402; // square mesh, size excludes the boundary cells; meshSize is no. of cells in each direction
-float meshWidth, meshHeight;
+float cellWidth, cellHeight;
 
 int cellIndxMap(int i, int j)   //i for vertical, j for horizontal
 {
@@ -68,10 +68,10 @@ void advectField(float field[][meshSizeP2], float uxField[][meshSizeP2], float u
     {
         for (int j = 0; j < meshSize; j++)
         {
-            xPos = j*meshWidth - uxField[i+1][j+1]*dt;
-            yPos = i*meshHeight - uyField[i+1][j+1]*dt;
-            int ix = floor(xPos/(float)meshWidth), iy = floor(yPos/(float)meshHeight);  // integer part
-            float jx = (xPos/(float)meshWidth) - ix, jy = (yPos/(float)meshHeight) - iy;    //fractional part
+            xPos = j*cellWidth - uxField[i+1][j+1]*dt;
+            yPos = i*cellHeight - uyField[i+1][j+1]*dt;
+            int ix = floor(xPos/(float)cellWidth), iy = floor(yPos/(float)cellHeight);  // integer part
+            float jx = (xPos/(float)cellWidth) - ix, jy = (yPos/(float)cellHeight) - iy;    //fractional part
            // ix = jx<=0.5?ix-1:ix;
            // iy = jy<=0.5?iy-1:iy;   //no need to change jx and jy
             if(ix+1<0 || ix+1>meshSize)  { cout<<"Problem in advection!"<<endl; ix=0; }   
@@ -100,8 +100,8 @@ int main()
     float uy[meshSizeP2][meshSizeP2] = {}; // 2d array of zeroes.
 
 
-    meshWidth = (float)wSize.x/(float)meshSize;
-    meshHeight = (float)wSize.y/(float)meshSize;
+    cellWidth = (float)wSize.x/(float)meshSize;
+    cellHeight = (float)wSize.y/(float)meshSize;
 
     RenderWindow w(VideoMode(wSize.x, wSize.y), "densityAdvection");
     w.setFramerateLimit(frameRate);
@@ -115,22 +115,22 @@ int main()
         for (int j = 0; j < meshSize; j++)
         {
             //set velocity field:
-            float x = 2*(j+1)*meshWidth/wSize.x, y = (i+1)*meshHeight/wSize.y;
+            float x = 2*(j+1)*cellWidth/wSize.x, y = (i+1)*cellHeight/wSize.y;
             ux[i+1][j+1] = Uscale*M_PI*(sin(M_PI*x)*cos(M_PI*y));
             uy[i+1][j+1] = -Uscale*M_PI*(cos(M_PI*x)*sin(M_PI*y));
             
             Vertex temp;
             temp.color = Color(255*density[i+1][j+1]);
-            temp.position = Vector2f(j*meshWidth, i*meshHeight);
+            temp.position = Vector2f(j*cellWidth, i*cellHeight);
             cells.push_back(temp);
             
-            temp.position = Vector2f((j+1)*meshWidth, i*meshHeight);
+            temp.position = Vector2f((j+1)*cellWidth, i*cellHeight);
             cells.push_back(temp);
             
-            temp.position = Vector2f((j+1)*meshWidth, (i+1)*meshHeight);
+            temp.position = Vector2f((j+1)*cellWidth, (i+1)*cellHeight);
             cells.push_back(temp);
             
-            temp.position = Vector2f(j*meshWidth, (i+1)*meshHeight);
+            temp.position = Vector2f(j*cellWidth, (i+1)*cellHeight);
             cells.push_back(temp);
         }   
     }
@@ -159,14 +159,14 @@ int main()
         int sourceSize = 5; //radius of source 
         if(Mouse::isButtonPressed(Mouse::Left))
         {
-            int localJ = floor(localMousePos.x/meshWidth), localI = floor(localMousePos.y/meshHeight);
+            int localJ = floor(localMousePos.x/cellWidth), localI = floor(localMousePos.y/cellHeight);
             for (int iSource = localI-sourceSize; iSource <= localI+sourceSize; iSource++)
             {
                 if(iSource<0 || iSource>=meshSize)   continue;
                 for (int jSource = localJ-sourceSize; jSource <= localJ+sourceSize; jSource++)
                 {
                     if(jSource<0 || jSource>=meshSize)   continue;
-                    float localD = abs(jSource - localJ)*meshWidth + abs(iSource - localI)*meshHeight, dMax = sourceSize*(meshWidth+meshHeight);
+                    float localD = abs(jSource - localJ)*cellWidth + abs(iSource - localI)*cellHeight, dMax = sourceSize*(cellWidth+cellHeight);
                     
                     density[iSource + 1][jSource + 1] = density[iSource + 1][jSource + 1]<1.f-localD/(2.f*dMax)?1.f-localD/(2.f*dMax):density[iSource + 1][jSource + 1]; // added ones for the boundary offset
                     int cellCoord = cellIndxMap(iSource, jSource);
@@ -187,7 +187,7 @@ int main()
         {
             for (int j = 0; j < meshSize; j++)
             {
-                float x = 2*(j+1)*meshWidth/wSize.x, y = (i+1)*meshHeight/wSize.y;
+                float x = 2*(j+1)*cellWidth/wSize.x, y = (i+1)*cellHeight/wSize.y;
                 ux[i+1][j+1] = Uscale*M_PI*(sin(M_PI*f(x,t))*cos(M_PI*y));
                 uy[i+1][j+1] = -Uscale*M_PI*(cos(M_PI*f(x,t))*(fPrime(x,t))*sin(M_PI*y));
         
