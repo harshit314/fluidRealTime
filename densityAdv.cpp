@@ -10,8 +10,8 @@ using namespace sf;
 //window size:
 Vector2i wSize(1200, 1200);
 
-//define mesh:
-const int meshSize = 400, meshSizeP2 = 402; // square mesh, size excludes the boundary cells; meshSize is no. of cells in each direction
+//define mesh, earlier 400:
+const int meshSize = 250, meshSizeP2 = 250+2; // square mesh, size excludes the boundary cells; meshSize is no. of cells in each direction
 float cellWidth, cellHeight;
 
 int cellIndxMap(int i, int j)   //i for vertical, j for horizontal
@@ -53,7 +53,8 @@ void diffuseField(float field[][meshSizeP2], float delta)   //pass 2d array by r
            for (int j = 0; j < meshSize; j++)
            {
                if(iter==0) fieldNext[i+1][j+1] = field[i+1][j+1];  //start with prev field, boundary cells are already always zero
-               else if(iter<iterMax && iter>0)    fieldNext[i+1][j+1] = (fieldNext[i+1][j+1] + del*(1.0/4.0)*(field[i+1+1][j+1]+field[i+1-1][j+1]+field[i+1][j+1+1]+field[i+1][j+1-1] ))/(1+del);
+              // else if(iter<iterMax && iter>0)    fieldNext[i+1][j+1] = (fieldNext[i+1][j+1] + del*(1.0/4.0)*(field[i+1+1][j+1]+field[i+1-1][j+1]+field[i+1][j+1+1]+field[i+1][j+1-1] ))/(1+del);
+               else if(iter<iterMax && iter>0)    fieldNext[i+1][j+1] = (field[i+1][j+1] + del*(1.0/4.0)*(fieldNext[i+1+1][j+1]+fieldNext[i+1-1][j+1]+fieldNext[i+1][j+1+1]+fieldNext[i+1][j+1-1] ))/(1+del);
                else field[i+1][j+1] = fieldNext[i+1][j+1];
            }
        }
@@ -176,7 +177,7 @@ int main()
         }   
 
         //diffuse:
-        diffuseField(density, 0.0001); //second argument characterizes diffusion constant
+        diffuseField(density, 1); //second argument characterizes diffusion constant
 
         //advect:
         advectField(density, ux, uy);
@@ -191,16 +192,26 @@ int main()
                 ux[i+1][j+1] = Uscale*M_PI*(sin(M_PI*f(x,t))*cos(M_PI*y));
                 uy[i+1][j+1] = -Uscale*M_PI*(cos(M_PI*f(x,t))*(fPrime(x,t))*sin(M_PI*y));
         
-                int cellCoord = cellIndxMap(i, j);
-                for(int cIndx1 = 0; cIndx1 < 2; cIndx1++)  
-                {
-                    for (int cIndx2 = 0; cIndx2 < 2; cIndx2++)
-                    {
-                        float tempRGB = cIndx1==0?255*density[i+1+cIndx1][j+1+cIndx2]:255*density[i+1+cIndx1][j+1+1-cIndx2];
-                        Color tmpColor = Color(tempRGB, tempRGB, tempRGB);
-                        cells[cellCoord + 2*cIndx1 + cIndx2].color = tmpColor;
-                    }
-                }
+                    int cellCoord = cellIndxMap(i, j);
+                    
+                    Color currColor = Color::White;
+                    
+                    float tempVal = 0.25*(density[i][j]+density[i+1][j]+density[i][j+1]+density[i+1][j+1]);
+                    //float tempVal = density[IX(i, j)]; 
+                    Color tmpColor = currColor*Color(255.f*tempVal, 255.f*tempVal, 255.f*tempVal);
+                    cells[cellCoord].color = tmpColor;
+                    
+                    tempVal = 0.25*(density[i][j+1]+density[i+1][j+1]+density[i][j+2]+density[i+1][j+2]);
+                    tmpColor = currColor*Color(255.f*tempVal, 255.f*tempVal, 255.f*tempVal);
+                    cells[cellCoord+1].color = tmpColor;
+
+                    tempVal = 0.25*(density[i+1][j+1]+density[i+2][j+1]+density[i+1][j+2]+density[i+2][j+2]);
+                    tmpColor = currColor*Color(255.f*tempVal, 255.f*tempVal, 255.f*tempVal);
+                    cells[cellCoord+2].color = tmpColor;
+
+                    tempVal = 0.25*(density[i+1][j]+density[i+2][j]+density[i+1][j+1]+density[i+2][j+1]);
+                    tmpColor = currColor*Color(255.f*tempVal, 255.f*tempVal, 255.f*tempVal);
+                    cells[cellCoord+3].color = tmpColor;
             }
         }
         t += dt;
