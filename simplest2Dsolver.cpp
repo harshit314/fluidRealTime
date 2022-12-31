@@ -8,10 +8,10 @@ using namespace std;
 using namespace sf;
 
 //window size:
-Vector2i wSize(900, 900);
+Vector2i wSize(1200, 1200);
 
 //define mesh:
-const int meshSize = 250, meshSizeP2 = 252; // square mesh, size excludes the boundary cells; meshSize is no. of cells in each direction
+const int meshSize = 220, meshSizeP2 = 222; // square mesh, size excludes the boundary cells; meshSize is no. of cells in each direction
 float cellWidth, cellHeight;
 
 //Velocity scale and time step:
@@ -55,7 +55,7 @@ void diffuseField(int b, float field[meshSizeP2][meshSizeP2], float delta)   //p
 {
     float fieldNext[meshSizeP2][meshSizeP2] = {};
     float del = delta;    //del = 4*kappa*dt/h^2, it controls the diffusion strength
-    int iterMax = 7;   // should compare with prev iteration step to terminate iteration loop
+    int iterMax = 2;   // should compare with prev iteration step to terminate iteration loop
     for (int iter = 0; iter <= iterMax; iter++)
     {
        for (int i = 0; i < meshSize; i++)
@@ -65,10 +65,13 @@ void diffuseField(int b, float field[meshSizeP2][meshSizeP2], float delta)   //p
                 if(iter==0) fieldNext[i+1][j+1] = field[i+1][j+1];  //start with prev field, boundary cells are already always zero
                 // else if(iter<iterMax && iter>0)    fieldNext[i+1][j+1] = (fieldNext[i+1][j+1] + del*(1.0/4.0)*(field[i+1+1][j+1]+field[i+1-1][j+1]+field[i+1][j+1+1]+field[i+1][j+1-1] ))/(1+del);
                 else if(iter<iterMax && iter>0)    fieldNext[i+1][j+1] = (field[i+1][j+1] + del*(1.0/4.0)*(fieldNext[i+1+1][j+1]+fieldNext[i+1-1][j+1]+fieldNext[i+1][j+1+1]+fieldNext[i+1][j+1-1] ))/(1+del);
+                
+              //  else if(iter<iterMax && iter>0)    fieldNext[i+1][j+1] = (field[i+1][j+1] + del*(1.0/4.0)*(field[i+1+1][j+1]+field[i+1-1][j+1]+field[i+1][j+1+1]+field[i+1][j+1-1] ))/(1+del);
+                
                 else field[i+1][j+1] = fieldNext[i+1][j+1];
            }
        }
-       if(b!=-1) setBnd(b, fieldNext);
+      // if(b!=-1) setBnd(b, fieldNext);
     }
     if(b!=-1) setBnd(b, field);
     //memcpy(field, fieldNext, sizeof(field));
@@ -110,9 +113,8 @@ void advectField(int b, float field[][meshSizeP2], float field0[][meshSizeP2], f
 
 void project(float pField[meshSizeP2][meshSizeP2], float uxField[][meshSizeP2], float uyField[][meshSizeP2])
 {
-    int iterMax = 20;   // should compare with prev iteration step to terminate iteration loop
+    int iterMax = 15;   // should compare with prev iteration step to terminate iteration loop
     float h = cellWidth; //same as cellHeight
-    float pFieldPrev[meshSizeP2][meshSizeP2] = {};
     float divField[meshSizeP2][meshSizeP2] = {};
     for (int iter = 0; iter <= iterMax; iter++)
     {
@@ -126,18 +128,6 @@ void project(float pField[meshSizeP2][meshSizeP2], float uxField[][meshSizeP2], 
        }
        //continuity for p at boundaries:
        setBnd(0, pField);
-       //Check error:
-    //    float sum = 0.f, tolerance = 0.05;
-    //    for (int i = 0; i < meshSize+2; i++)
-    //    {
-    //         for (int j = 0; j < meshSize+2; j++)
-    //         {
-    //             sum += abs(pFieldPrev[i][j] - pField[i][j]);
-    //             pFieldPrev[i][j] = pField[i][j];
-    //         }
-    //    }
-    //    if(sum/pow(meshSizeP2, 2.0)<tolerance) break;//{cout<<"iter: "<<iter<<" "<<sum<<"; "; break;} 
-       //if(iter==iterMax && sum/pow(meshSizeP2, 2.0)>tolerance)  cout<<sum/pow(meshSizeP2, 2.0)<<endl;
     }
     for (int i = 0; i < meshSize; i++)
     {
@@ -166,7 +156,9 @@ int main()
     cellHeight = (float)wSize.y/(float)meshSize;
 
     dt = 2.f*cellWidth/Uscale;
+    dt = dt>0.08?dt:0.08;
     cout<<"dt: "<<dt<<endl;
+    
 
     RenderWindow w(VideoMode(wSize.x, wSize.y), "simplest2Dsolver");
     w.setFramerateLimit(60);
@@ -200,7 +192,10 @@ int main()
     Color currColor = Color::White;
     
     bool begin = false, mouseDown = false;
-    float dissipation = 0.05;
+    float dissipation = 0.04;
+
+    int ct = 0;
+    int Niter=0;
     while (w.isOpen())
     {
         Event e;
@@ -224,6 +219,15 @@ int main()
                     }
                 }
                 if(e.key.code==Keyboard::B) begin=begin?false:true;
+                if(e.key.code==Keyboard::E) Niter+=1;
+                
+                if(e.key.code==Keyboard::T) 
+                {
+                    int ix = (floor)((float)localMousePos.x/cellWidth);
+                    int iy = (floor)((float)localMousePos.y/cellHeight);
+                    float wz = (uyPrev[iy+1][ix+1+1] - uyPrev[iy+1][ix+1-1] - uxPrev[iy+1+1][ix+1] + uxPrev[iy+1-1][ix+1])/(2.f*cellWidth);
+                    cout<<"vorticity:"<<wz<<endl;
+                }
 
             }
             if(e.type==Event::MouseButtonReleased)
@@ -280,18 +284,20 @@ int main()
 
             // project(pField, uxPrev, uyPrev);
             
+           // if(ct<=Niter)
+            {
+                advectField(1, ux, uxPrev, uxPrev, uyPrev);
+                advectField(2, uy, uyPrev, uxPrev, uyPrev);
+                
+                project(pField, ux, uy);
 
-            advectField(1, ux, uxPrev, uxPrev, uyPrev);
-            advectField(2, uy, uyPrev, uxPrev, uyPrev);
-            
-            project(pField, ux, uy);
+                //diffuse:
+                diffuseField(-1, density, 0.1); //second argument characterizes diffusion constant
 
-            //diffuse:
-            diffuseField(-1, density, 0.1); //second argument characterizes diffusion constant
-
-            //advect:
-            advectField(-1, density, density, ux, uy);
-  
+                //advect:
+                advectField(-1, density, density, ux, uy);
+                ct++;
+            }  
             for (int i = 0; i < meshSizeP2; i++)
             {
                 for (int j = 0; j < meshSizeP2; j++)
@@ -336,7 +342,7 @@ int main()
         
         }
 
-        
+                
         w.clear();
         w.draw(cells.data(), cells.size(), Quads);
         w.display();    
